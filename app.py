@@ -283,5 +283,3 @@ st.info(
 with st.expander("📄 View Filtered Raw Data"):
     st.dataframe(filtered_df)
 
-# ---------------- FOOTER ----------------
-st.caption("Coffee Shop Sales Dashboard | Streamlit Project")
