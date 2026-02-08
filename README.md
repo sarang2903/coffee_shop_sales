@@ -13,11 +13,11 @@ The transaction_date column was converted into datetime format so that time-base
 # 2. Exploring the Data
 
 Next, I explored the categorical columns in the dataset such as:
-Store location
-Product category
-Product type
-Weekday
-Month
+Store location,
+Product category,
+Product type,
+Weekday,
+Month,
 
 I checked unique values and value counts to understand how many stores and product types were present and how transactions were distributed across days and months. This step helped me become familiar with the dataset and made the later analysis easier to interpret.
 
