@@ -1,4 +1,4 @@
-#Project Title: Coffee Shop Sales Analysis
+##Project Title: Coffee Shop Sales Analysis
 Introduction
 
 In this project, I worked with a coffee shop sales dataset to understand how sales vary across different stores, products, and time periods. The dataset includes details such as transaction dates, store locations, product categories, product types, quantity sold, and total sales amount.
