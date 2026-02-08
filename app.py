@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -8,7 +9,7 @@ st.set_page_config(
 )
 
 st.title("☕ Coffee Shop Sales Dashboard")
-st.caption("Interactive Sales Analysis & Insights (Table-Based)")
+st.caption("Interactive Sales Analysis & Insights")
 
 # ---------------- LOAD DATA ----------------
 @st.cache_data
@@ -38,7 +39,7 @@ month = st.sidebar.selectbox(
     ["All"] + sorted(df["month"].unique())
 )
 
-# ---------------- APPLY FILTERS ----------------
+# ---------------- FILTER DATA ----------------
 filtered_df = df.copy()
 
 if location != "All":
@@ -60,20 +61,24 @@ col2.metric("🧾 Total Transactions", filtered_df.shape[0])
 col3.metric("📦 Quantity Sold", int(filtered_df["transaction_qty"].sum()))
 col4.metric("🛒 Avg Bill Value", f"₹ {filtered_df['total_amount'].mean():.0f}")
 
-# ---------------- MONTHLY SALES TABLE ----------------
-st.subheader("📈 Monthly Sales Summary")
+# ---------------- MONTHLY SALES TREND ----------------
+st.subheader("📈 Monthly Sales Trend")
 
 monthly_sales = (
     filtered_df
     .groupby("month")["total_amount"]
     .sum()
-    .sort_values(ascending=False)
 )
 
-st.dataframe(monthly_sales)
+fig, ax = plt.subplots(figsize=(6, 3))
+monthly_sales.plot(marker="o", ax=ax)
+ax.set_ylabel("Total Sales")
+ax.set_xlabel("Month")
+ax.set_title("Sales Trend Over Months")
+st.pyplot(fig)
 
 # ---------------- PRODUCT PERFORMANCE ----------------
-st.subheader("📦 Product Performance (Revenue)")
+st.subheader("📦 Product Performance")
 
 product_sales = (
     filtered_df
@@ -84,6 +89,12 @@ product_sales = (
 
 st.dataframe(product_sales)
 
+fig2, ax2 = plt.subplots(figsize=(6, 3))
+product_sales.head(10).plot(kind="bar", ax=ax2)
+ax2.set_ylabel("Total Sales")
+ax2.set_title("Top 10 Products by Revenue")
+st.pyplot(fig2)
+
 # ---------------- WEEKDAY INSIGHTS ----------------
 st.subheader("📅 Weekday Insights")
 
@@ -91,7 +102,7 @@ weekday_avg = (
     filtered_df
     .groupby("weekday")["total_amount"]
     .mean()
-    .sort_values(ascending=False)
+    .sort_values()
 )
 
 best_day = weekday_avg.idxmax()
@@ -101,7 +112,10 @@ col5, col6 = st.columns(2)
 col5.success(f"🔥 Best Sales Day: **{best_day}**")
 col6.warning(f"❄️ Lowest Sales Day: **{worst_day}**")
 
-st.dataframe(weekday_avg)
+fig3, ax3 = plt.subplots(figsize=(6, 3))
+weekday_avg.plot(kind="barh", ax=ax3)
+ax3.set_xlabel("Average Sales")
+st.pyplot(fig3)
 
 # ---------------- CATEGORY vs LOCATION ----------------
 st.subheader("📊 Category vs Store Location")
@@ -122,8 +136,7 @@ st.subheader("🧠 Smart Insights")
 
 top_product = product_sales.idxmax()
 top_category = (
-    filtered_df
-    .groupby("product_category")["total_amount"]
+    filtered_df.groupby("product_category")["total_amount"]
     .sum()
     .idxmax()
 )
