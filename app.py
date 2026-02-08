@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="Coffee Shop Sales Dashboard", layout="wide")
 
 st.title("☕ Coffee Shop Sales Dashboard")
-st.markdown("Interactive insights into coffee shop sales performance.")
+st.markdown("Interactive sales insights across locations, products, and time.")
 
-# --------------------------------------------------
+# -----------------------------
 # Load Data
-# --------------------------------------------------
+# -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("CoffeeShopSales-cleaned.csv")
@@ -19,29 +19,29 @@ def load_data():
 
 df = load_data()
 
-# --------------------------------------------------
+# -----------------------------
 # Sidebar Filters
-# --------------------------------------------------
-st.sidebar.header("🔎 Filter Data")
+# -----------------------------
+st.sidebar.header("🔎 Filters")
 
 location = st.sidebar.selectbox(
-    "Store Location",
-    ["All"] + sorted(df['store_location'].unique())
+    "Select Store Location",
+    ["All"] + list(df['store_location'].unique())
 )
 
 category = st.sidebar.selectbox(
-    "Product Category",
-    ["All"] + sorted(df['product_category'].unique())
+    "Select Product Category",
+    ["All"] + list(df['product_category'].unique())
 )
 
 month = st.sidebar.selectbox(
-    "Month",
-    ["All"] + sorted(df['month'].unique())
+    "Select Month",
+    ["All"] + list(df['month'].unique())
 )
 
-# --------------------------------------------------
+# -----------------------------
 # Apply Filters
-# --------------------------------------------------
+# -----------------------------
 filtered_df = df.copy()
 
 if location != "All":
@@ -53,101 +53,118 @@ if category != "All":
 if month != "All":
     filtered_df = filtered_df[filtered_df['month'] == month]
 
-# --------------------------------------------------
-# KPI Section
-# --------------------------------------------------
-st.subheader("📊 Key Performance Indicators")
+# -----------------------------
+# KPIs
+# -----------------------------
+st.subheader("📊 Key Metrics")
 
-k1, k2, k3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
-k1.metric("💰 Total Sales", f"{filtered_df['total_amount'].sum():,.0f}")
-k2.metric("🧾 Transactions", filtered_df.shape[0])
-k3.metric("☕ Quantity Sold", filtered_df['transaction_qty'].sum())
+c1.metric("💰 Total Sales", f"{filtered_df['total_amount'].sum():,.0f}")
+c2.metric("🧾 Transactions", filtered_df.shape[0])
+c3.metric("☕ Quantity Sold", filtered_df['transaction_qty'].sum())
 
-# --------------------------------------------------
-# Sales by Location (Bar Chart)
-# --------------------------------------------------
+# -----------------------------
+# Sales Analysis
+# -----------------------------
 st.divider()
-st.subheader("📍 Sales by Store Location")
+st.subheader("📍 Sales Analysis")
 
-sales_location = filtered_df.groupby('store_location')['total_amount'].sum()
+col1, col2 = st.columns(2)
 
-fig, ax = plt.subplots()
-sales_location.plot(kind='bar', ax=ax)
-ax.set_ylabel("Total Sales")
-ax.set_xlabel("Store Location")
-st.pyplot(fig)
+with col1:
+    st.write("### Sales by Store Location")
+    sales_loc = filtered_df.groupby('store_location')['total_amount'].sum()
+    st.dataframe(sales_loc)
 
-# --------------------------------------------------
-# Monthly Sales Trend (Line Chart)
-# --------------------------------------------------
+    fig, ax = plt.subplots(figsize=(4, 3))   # SMALL GRAPH
+    sales_loc.plot(kind='bar', ax=ax)
+    ax.set_ylabel("Sales")
+    st.pyplot(fig)
+
+with col2:
+    st.write("### Sales by Month")
+    sales_month = filtered_df.groupby('month')['total_amount'].sum()
+    st.dataframe(sales_month)
+
+    fig, ax = plt.subplots(figsize=(4, 3))   # SMALL GRAPH
+    sales_month.plot(kind='line', marker='o', ax=ax)
+    ax.set_ylabel("Sales")
+    st.pyplot(fig)
+
+# -----------------------------
+# Product Insights
+# -----------------------------
 st.divider()
-st.subheader("📈 Monthly Sales Trend")
-
-monthly_sales = filtered_df.groupby('month')['total_amount'].sum()
-
-fig, ax = plt.subplots()
-monthly_sales.plot(kind='line', marker='o', ax=ax)
-ax.set_ylabel("Total Sales")
-ax.set_xlabel("Month")
-st.pyplot(fig)
-
-# --------------------------------------------------
-# Top Products
-# --------------------------------------------------
-st.divider()
-st.subheader("🛍 Top Performing Products")
+st.subheader("🛍 Product Insights")
 
 col1, col2 = st.columns(2)
 
 with col1:
     st.write("### Top 10 Products by Quantity")
-    st.dataframe(
+    top_products = (
         filtered_df.groupby('product_type')['transaction_qty']
         .sum()
         .sort_values(ascending=False)
         .head(10)
     )
+    st.dataframe(top_products)
+
+    fig, ax = plt.subplots(figsize=(4, 3))
+    top_products.plot(kind='bar', ax=ax)
+    ax.set_ylabel("Quantity")
+    st.pyplot(fig)
 
 with col2:
-    st.write("### Top 5 Categories by Sales")
-    st.dataframe(
+    st.write("### Top 5 Product Categories by Sales")
+    top_categories = (
         filtered_df.groupby('product_category')['total_amount']
         .sum()
         .sort_values(ascending=False)
         .head(5)
     )
+    st.dataframe(top_categories)
 
-# --------------------------------------------------
-# Weekday Analysis (Bar Chart)
-# --------------------------------------------------
+    fig, ax = plt.subplots(figsize=(4, 3))
+    top_categories.plot(kind='bar', ax=ax)
+    ax.set_ylabel("Sales")
+    st.pyplot(fig)
+
+# -----------------------------
+# Weekday Performance
+# -----------------------------
 st.divider()
-st.subheader("📅 Average Sales by Weekday")
+st.subheader("📅 Weekday Performance")
 
-weekday_avg = filtered_df.groupby('weekday')['total_amount'].mean()
+weekday_avg = (
+    filtered_df.groupby('weekday')['total_amount']
+    .mean()
+    .sort_values(ascending=False)
+)
 
-fig, ax = plt.subplots()
+st.dataframe(weekday_avg)
+
+fig, ax = plt.subplots(figsize=(4, 3))
 weekday_avg.plot(kind='bar', ax=ax)
 ax.set_ylabel("Average Sales")
-ax.set_xlabel("Weekday")
 st.pyplot(fig)
 
-# --------------------------------------------------
-# Pivot Table Explorer
-# --------------------------------------------------
+# -----------------------------
+# Pivot Table Section
+# -----------------------------
 st.divider()
 st.subheader("📐 Pivot Table Explorer")
 
-pivot_choice = st.selectbox(
-    "Select View",
+pivot_option = st.selectbox(
+    "Choose Pivot View",
     [
-        "Category vs Location (Sales)",
-        "Weekday vs Location (Sales)",
-        "Month vs Category (Quantity)"
+        "Product Category vs Store Location",
+        "Weekday vs Store Location",
+        "Month vs Product Category"
     ]
 )
 
-if pivot_choice == "Category vs Location (Sales)":
+if pivot_option == "Product Category vs Store Location":
     pivot = pd.pivot_table(
         filtered_df,
         index='product_category',
@@ -156,7 +173,7 @@ if pivot_choice == "Category vs Location (Sales)":
         aggfunc='sum'
     )
 
-elif pivot_choice == "Weekday vs Location (Sales)":
+elif pivot_option == "Weekday vs Store Location":
     pivot = pd.pivot_table(
         filtered_df,
         index='weekday',
@@ -176,28 +193,28 @@ else:
 
 st.dataframe(pivot)
 
-# --------------------------------------------------
+# -----------------------------
 # Product Drill Down
-# --------------------------------------------------
+# -----------------------------
 st.divider()
 st.subheader("🔍 Product Drill Down")
 
-product = st.selectbox(
+selected_product = st.selectbox(
     "Select Product Type",
-    sorted(filtered_df['product_type'].unique())
+    filtered_df['product_type'].unique()
 )
 
-product_df = filtered_df[filtered_df['product_type'] == product]
+product_df = filtered_df[filtered_df['product_type'] == selected_product]
+product_sales = product_df.groupby('store_location')['total_amount'].sum()
 
-fig, ax = plt.subplots()
-product_df.groupby('store_location')['total_amount'].sum().plot(
-    kind='bar', ax=ax
-)
-ax.set_ylabel("Total Sales")
-ax.set_xlabel("Store Location")
+st.dataframe(product_sales)
+
+fig, ax = plt.subplots(figsize=(4, 3))
+product_sales.plot(kind='bar', ax=ax)
+ax.set_ylabel("Sales")
 st.pyplot(fig)
 
-# --------------------------------------------------
+# -----------------------------
 # Footer
-# --------------------------------------------------
-st.caption("Coffee Shop Sales Dashboard | Streamlit Project")
+# -----------------------------
+st.caption("Built with Streamlit | Coffee Shop Sales Analysis")
