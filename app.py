@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -8,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("☕ Coffee Shop Sales – Interactive Dashboard")
+st.title("☕ Coffee Shop Sales – Interactive Analysis (No Charts)")
 
 # ---------------- LOAD DATA ----------------
 @st.cache_data
@@ -24,18 +23,18 @@ df = load_data()
 st.sidebar.header("🔎 Filters")
 
 location = st.sidebar.selectbox(
-    "Select Store Location",
-    ["All"] + sorted(df["store_location"].unique().tolist())
+    "Store Location",
+    ["All"] + sorted(df["store_location"].unique())
 )
 
 category = st.sidebar.selectbox(
-    "Select Product Category",
-    ["All"] + sorted(df["product_category"].unique().tolist())
+    "Product Category",
+    ["All"] + sorted(df["product_category"].unique())
 )
 
 month = st.sidebar.selectbox(
-    "Select Month",
-    ["All"] + sorted(df["month"].unique().tolist())
+    "Month",
+    ["All"] + sorted(df["month"].unique())
 )
 
 # ---------------- APPLY FILTERS ----------------
@@ -71,55 +70,72 @@ col3.metric(
 )
 
 # ---------------- SALES BY PRODUCT TYPE ----------------
-st.subheader("📦 Sales by Product Type")
+st.subheader("📦 Revenue by Product Type")
 
-sales_by_product = (
+product_sales = (
     filtered_df
-    .groupby("product_type")["total_amount"]
+    .groupby("product_type", as_index=False)["total_amount"]
     .sum()
-    .sort_values(ascending=False)
+    .sort_values(by="total_amount", ascending=False)
 )
 
-st.dataframe(sales_by_product)
+st.dataframe(product_sales)
 
-# ---------------- BAR CHART ----------------
-fig, ax = plt.subplots()
-sales_by_product.head(10).plot(kind="bar", ax=ax)
-ax.set_ylabel("Total Sales")
-ax.set_title("Top 10 Product Types by Sales")
-st.pyplot(fig)
-
-# ---------------- WEEKDAY ANALYSIS ----------------
+# ---------------- WEEKDAY PERFORMANCE ----------------
 st.subheader("📅 Average Sales by Weekday")
 
 weekday_sales = (
     filtered_df
-    .groupby("weekday")["total_amount"]
+    .groupby("weekday", as_index=False)["total_amount"]
     .mean()
-    .sort_values()
+    .sort_values(by="total_amount", ascending=False)
 )
 
 st.dataframe(weekday_sales)
 
-fig2, ax2 = plt.subplots()
-weekday_sales.plot(kind="barh", ax=ax2)
-ax2.set_xlabel("Average Sales")
-st.pyplot(fig2)
+# ---------------- TOP & BOTTOM PRODUCTS ----------------
+st.subheader("🏆 Product Performance")
+
+col4, col5 = st.columns(2)
+
+with col4:
+    st.write("### 🔝 Top 10 Products by Quantity Sold")
+    top_products = (
+        filtered_df
+        .groupby("product_type", as_index=False)["transaction_qty"]
+        .sum()
+        .sort_values(by="transaction_qty", ascending=False)
+        .head(10)
+    )
+    st.dataframe(top_products)
+
+with col5:
+    st.write("### 🔻 Bottom 10 Products by Quantity Sold")
+    bottom_products = (
+        filtered_df
+        .groupby("product_type", as_index=False)["transaction_qty"]
+        .sum()
+        .sort_values(by="transaction_qty")
+        .head(10)
+    )
+    st.dataframe(bottom_products)
 
 # ---------------- PIVOT TABLE ----------------
-st.subheader("📊 Category vs Store Location")
+st.subheader("📊 Category vs Store Location (Revenue)")
 
-pivot = pd.pivot_table(
+pivot_table = pd.pivot_table(
     filtered_df,
     index="product_category",
     columns="store_location",
     values="total_amount",
     aggfunc="sum",
-    fill_value=0
+    fill_value=0,
+    margins=True
 )
 
-st.dataframe(pivot)
+st.dataframe(pivot_table)
 
-# ---------------- RAW DATA (OPTIONAL) ----------------
-with st.expander("📄 View Raw Data"):
+# ---------------- RAW DATA ----------------
+with st.expander("📄 View Filtered Raw Data"):
     st.dataframe(filtered_df)
+    
