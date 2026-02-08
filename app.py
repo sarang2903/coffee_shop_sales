@@ -1,15 +1,16 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import seaborn as sb
 import matplotlib.pyplot as plt
 
-# Page config
-st.set_page_config(page_title="☕ Coffee Shop Sales Analysis", layout="wide")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(
+    page_title="☕ Coffee Shop Sales Dashboard",
+    layout="wide"
+)
 
-st.title("☕ Coffee Shop Sales Analysis (EDA)")
+st.title("☕ Coffee Shop Sales – Interactive Dashboard")
 
-# Load data
+# ---------------- LOAD DATA ----------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("CoffeeShopSales-cleaned.csv")
@@ -19,143 +20,106 @@ def load_data():
 
 df = load_data()
 
-# Show raw data
-st.subheader("📄 Raw Dataset")
-st.dataframe(df)
+# ---------------- SIDEBAR FILTERS ----------------
+st.sidebar.header("🔎 Filters")
 
-# Unique values & counts
-st.subheader("🔍 Categorical Columns Overview")
+location = st.sidebar.selectbox(
+    "Select Store Location",
+    ["All"] + sorted(df["store_location"].unique().tolist())
+)
 
-cols = ['store_location', 'product_category', 'product_type',
-        'product_detail', 'weekday', 'month']
+category = st.sidebar.selectbox(
+    "Select Product Category",
+    ["All"] + sorted(df["product_category"].unique().tolist())
+)
 
-for col in cols:
-    with st.expander(f"{col}"):
-        st.write("**Unique values:**")
-        st.write(df[col].unique())
-        st.write("**Value counts:**")
-        st.write(df[col].value_counts())
+month = st.sidebar.selectbox(
+    "Select Month",
+    ["All"] + sorted(df["month"].unique().tolist())
+)
 
-# Aggregations
-st.subheader("📊 Sales Insights")
+# ---------------- APPLY FILTERS ----------------
+filtered_df = df.copy()
+
+if location != "All":
+    filtered_df = filtered_df[filtered_df["store_location"] == location]
+
+if category != "All":
+    filtered_df = filtered_df[filtered_df["product_category"] == category]
+
+if month != "All":
+    filtered_df = filtered_df[filtered_df["month"] == month]
+
+# ---------------- KPI METRICS ----------------
+st.subheader("📌 Key Metrics")
 
 col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.write("### Sales by Store Location")
-    st.dataframe(df.groupby('store_location')['total_amount'].sum())
+col1.metric(
+    "Total Revenue",
+    f"₹ {filtered_df['total_amount'].sum():,.0f}"
+)
 
-with col2:
-    st.write("### Sales by Month")
-    st.dataframe(df.groupby('month')['total_amount'].sum())
+col2.metric(
+    "Total Transactions",
+    filtered_df.shape[0]
+)
 
-with col3:
-    st.write("### Sales by Product Category")
-    st.dataframe(df.groupby('product_category')['total_amount'].sum())
+col3.metric(
+    "Total Quantity Sold",
+    int(filtered_df["transaction_qty"].sum())
+)
 
-# Top categories
-st.subheader("🏆 Top Performing Products")
+# ---------------- SALES BY PRODUCT TYPE ----------------
+st.subheader("📦 Sales by Product Type")
 
-col4, col5 = st.columns(2)
-
-with col4:
-    st.write("### Top 5 Product Categories (Revenue)")
-    st.dataframe(
-        df.groupby('product_category')['total_amount']
-        .sum()
-        .nlargest(5)
-    )
-
-with col5:
-    st.write("### Top 10 Product Types (Quantity Sold)")
-    st.dataframe(
-        df.groupby('product_type')['transaction_qty']
-        .sum()
-        .nlargest(10)
-    )
-
-# Least selling products
-st.subheader("📉 Least Selling Product Types")
-st.dataframe(
-    df.groupby('product_type')['transaction_qty']
+sales_by_product = (
+    filtered_df
+    .groupby("product_type")["total_amount"]
     .sum()
-    .nsmallest(10)
+    .sort_values(ascending=False)
 )
 
-# Average weekday sales
+st.dataframe(sales_by_product)
+
+# ---------------- BAR CHART ----------------
+fig, ax = plt.subplots()
+sales_by_product.head(10).plot(kind="bar", ax=ax)
+ax.set_ylabel("Total Sales")
+ax.set_title("Top 10 Product Types by Sales")
+st.pyplot(fig)
+
+# ---------------- WEEKDAY ANALYSIS ----------------
 st.subheader("📅 Average Sales by Weekday")
-st.dataframe(df.groupby('weekday')['total_amount'].mean())
 
-# Pivot tables
-st.subheader("📌 Pivot Tables")
-
-st.write("### Product Category vs Store Location")
-st.dataframe(
-    pd.pivot_table(
-        df,
-        index='product_category',
-        columns='store_location',
-        values='total_amount',
-        aggfunc='sum',
-        margins=True
-    )
+weekday_sales = (
+    filtered_df
+    .groupby("weekday")["total_amount"]
+    .mean()
+    .sort_values()
 )
 
-st.write("### Weekday vs Store Location")
-st.dataframe(
-    pd.pivot_table(
-        df,
-        index='weekday',
-        columns='store_location',
-        values='total_amount',
-        aggfunc='sum',
-        margins=True
-    )
+st.dataframe(weekday_sales)
+
+fig2, ax2 = plt.subplots()
+weekday_sales.plot(kind="barh", ax=ax2)
+ax2.set_xlabel("Average Sales")
+st.pyplot(fig2)
+
+# ---------------- PIVOT TABLE ----------------
+st.subheader("📊 Category vs Store Location")
+
+pivot = pd.pivot_table(
+    filtered_df,
+    index="product_category",
+    columns="store_location",
+    values="total_amount",
+    aggfunc="sum",
+    fill_value=0
 )
 
-st.write("### Product Type vs Product Category")
-st.dataframe(
-    pd.pivot_table(
-        df,
-        index='product_type',
-        columns='product_category',
-        values='transaction_qty',
-        aggfunc='sum',
-        margins=True
-    )
-)
+st.dataframe(pivot)
 
-st.write("### Month vs Product Category")
-st.dataframe(
-    pd.pivot_table(
-        df,
-        index='month',
-        columns='product_category',
-        values='transaction_qty',
-        aggfunc='sum',
-        margins=True
-    )
-)
-
-# User interaction section
-st.subheader("🎯 Custom Analysis")
-
-location = st.selectbox(
-    "Select Store Location",
-    df['store_location'].unique()
-)
-
-category = st.selectbox(
-    "Select Product Category",
-    df['product_category'].unique()
-)
-
-filtered_df = df[
-    (df['store_location'] == location) &
-    (df['product_category'] == category)
-]
-
-st.write(f"### Total Sales by Product Type in **{location}** ({category})")
-st.dataframe(
-    filtered_df.groupby('product_type')['total_amount'].sum()
-)
+# ---------------- RAW DATA (OPTIONAL) ----------------
+with st.expander("📄 View Raw Data"):
+    st.dataframe(filtered_df)
