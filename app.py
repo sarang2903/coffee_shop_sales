@@ -2,153 +2,196 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="☕ Coffee Shop Sales Dashboard",
-    layout="wide"
-)
+st.set_page_config(page_title="Coffee Shop Sales Dashboard", layout="wide")
 
 st.title("☕ Coffee Shop Sales Dashboard")
-st.caption("Interactive Sales Analysis & Insights")
+st.markdown("Interactive sales insights across locations, products, and time.")
 
-# ---------------- LOAD DATA ----------------
+# -----------------------------
+# Load Data
+# -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("CoffeeShopSales-cleaned.csv")
-    df["transaction_date"] = pd.to_datetime(df["transaction_date"])
-    df["month"] = df["transaction_date"].dt.month_name()
+    df['transaction_date'] = pd.to_datetime(df['transaction_date'])
+    df['month'] = df['transaction_date'].dt.month_name()
     return df
 
 df = load_data()
 
-# ---------------- SIDEBAR FILTERS ----------------
-st.sidebar.header("🔎 Filter Data")
+# -----------------------------
+# Sidebar Filters
+# -----------------------------
+st.sidebar.header("🔎 Filters")
 
 location = st.sidebar.selectbox(
-    "Store Location",
-    ["All"] + sorted(df["store_location"].unique())
+    "Select Store Location",
+    options=["All"] + list(df['store_location'].unique())
 )
 
 category = st.sidebar.selectbox(
-    "Product Category",
-    ["All"] + sorted(df["product_category"].unique())
+    "Select Product Category",
+    options=["All"] + list(df['product_category'].unique())
 )
 
 month = st.sidebar.selectbox(
-    "Month",
-    ["All"] + sorted(df["month"].unique())
+    "Select Month",
+    options=["All"] + list(df['month'].unique())
 )
 
-# ---------------- FILTER DATA ----------------
+# -----------------------------
+# Apply Filters
+# -----------------------------
 filtered_df = df.copy()
 
 if location != "All":
-    filtered_df = filtered_df[filtered_df["store_location"] == location]
+    filtered_df = filtered_df[filtered_df['store_location'] == location]
 
 if category != "All":
-    filtered_df = filtered_df[filtered_df["product_category"] == category]
+    filtered_df = filtered_df[filtered_df['product_category'] == category]
 
 if month != "All":
-    filtered_df = filtered_df[filtered_df["month"] == month]
+    filtered_df = filtered_df[filtered_df['month'] == month]
 
-# ---------------- KPI METRICS ----------------
-st.subheader("📌 Key Performance Indicators")
+# -----------------------------
+# KPIs
+# -----------------------------
+st.subheader("📊 Key Metrics")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
-col1.metric("💰 Total Revenue", f"₹ {filtered_df['total_amount'].sum():,.0f}")
-col2.metric("🧾 Total Transactions", filtered_df.shape[0])
-col3.metric("📦 Quantity Sold", int(filtered_df["transaction_qty"].sum()))
-col4.metric("🛒 Avg Bill Value", f"₹ {filtered_df['total_amount'].mean():.0f}")
+col1.metric("Total Sales 💰", f"{filtered_df['total_amount'].sum():,.0f}")
+col2.metric("Total Transactions 🧾", filtered_df.shape[0])
+col3.metric("Total Quantity ☕", filtered_df['transaction_qty'].sum())
 
-# ---------------- MONTHLY SALES TREND ----------------
-st.subheader("📈 Monthly Sales Trend")
+# -----------------------------
+# Sales Analysis
+# -----------------------------
+st.divider()
+st.subheader("📍 Sales Analysis")
 
-monthly_sales = (
-    filtered_df
-    .groupby("month")["total_amount"]
-    .sum()
-)
+col1, col2 = st.columns(2)
 
-fig, ax = plt.subplots(figsize=(6, 3))
-monthly_sales.plot(marker="o", ax=ax)
-ax.set_ylabel("Total Sales")
-ax.set_xlabel("Month")
-ax.set_title("Sales Trend Over Months")
-st.pyplot(fig)
+with col1:
+    st.write("### Sales by Store Location")
+    st.dataframe(
+        filtered_df.groupby('store_location')['total_amount']
+        .sum()
+        .sort_values(ascending=False)
+    )
 
-# ---------------- PRODUCT PERFORMANCE ----------------
-st.subheader("📦 Product Performance")
+with col2:
+    st.write("### Sales by Month")
+    st.dataframe(
+        filtered_df.groupby('month')['total_amount']
+        .sum()
+        .sort_values(ascending=False)
+    )
 
-product_sales = (
-    filtered_df
-    .groupby("product_type")["total_amount"]
-    .sum()
+# -----------------------------
+# Product Insights
+# -----------------------------
+st.divider()
+st.subheader("🛍 Product Insights")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.write("### Top 10 Products by Quantity")
+    st.dataframe(
+        filtered_df.groupby('product_type')['transaction_qty']
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+    )
+
+with col2:
+    st.write("### Top 5 Product Categories by Sales")
+    st.dataframe(
+        filtered_df.groupby('product_category')['total_amount']
+        .sum()
+        .sort_values(ascending=False)
+        .head(5)
+    )
+
+# -----------------------------
+# Weekday Performance
+# -----------------------------
+st.divider()
+st.subheader("📅 Weekday Performance")
+
+st.dataframe(
+    filtered_df.groupby('weekday')['total_amount']
+    .mean()
     .sort_values(ascending=False)
 )
 
-st.dataframe(product_sales)
+# -----------------------------
+# Pivot Table Section
+# -----------------------------
+st.divider()
+st.subheader("📐 Pivot Table Explorer")
 
-fig2, ax2 = plt.subplots(figsize=(6, 3))
-product_sales.head(10).plot(kind="bar", ax=ax2)
-ax2.set_ylabel("Total Sales")
-ax2.set_title("Top 10 Products by Revenue")
-st.pyplot(fig2)
-
-# ---------------- WEEKDAY INSIGHTS ----------------
-st.subheader("📅 Weekday Insights")
-
-weekday_avg = (
-    filtered_df
-    .groupby("weekday")["total_amount"]
-    .mean()
-    .sort_values()
+pivot_option = st.selectbox(
+    "Choose Pivot View",
+    [
+        "Product Category vs Store Location",
+        "Weekday vs Store Location",
+        "Month vs Product Category"
+    ]
 )
 
-best_day = weekday_avg.idxmax()
-worst_day = weekday_avg.idxmin()
+if pivot_option == "Product Category vs Store Location":
+    pivot = pd.pivot_table(
+        filtered_df,
+        index='product_category',
+        columns='store_location',
+        values='total_amount',
+        aggfunc='sum',
+        margins=True
+    )
 
-col5, col6 = st.columns(2)
-col5.success(f"🔥 Best Sales Day: **{best_day}**")
-col6.warning(f"❄️ Lowest Sales Day: **{worst_day}**")
+elif pivot_option == "Weekday vs Store Location":
+    pivot = pd.pivot_table(
+        filtered_df,
+        index='weekday',
+        columns='store_location',
+        values='total_amount',
+        aggfunc='sum',
+        margins=True
+    )
 
-fig3, ax3 = plt.subplots(figsize=(6, 3))
-weekday_avg.plot(kind="barh", ax=ax3)
-ax3.set_xlabel("Average Sales")
-st.pyplot(fig3)
-
-# ---------------- CATEGORY vs LOCATION ----------------
-st.subheader("📊 Category vs Store Location")
-
-pivot = pd.pivot_table(
-    filtered_df,
-    index="product_category",
-    columns="store_location",
-    values="total_amount",
-    aggfunc="sum",
-    fill_value=0
-)
+else:
+    pivot = pd.pivot_table(
+        filtered_df,
+        index='month',
+        columns='product_category',
+        values='transaction_qty',
+        aggfunc='sum',
+        margins=True
+    )
 
 st.dataframe(pivot)
 
-# ---------------- SMART INSIGHTS ----------------
-st.subheader("🧠 Smart Insights")
+# -----------------------------
+# Product Drill Down
+# -----------------------------
+st.divider()
+st.subheader("🔍 Product Drill Down")
 
-top_product = product_sales.idxmax()
-top_category = (
-    filtered_df.groupby("product_category")["total_amount"]
-    .sum()
-    .idxmax()
+selected_product = st.selectbox(
+    "Select Product Type",
+    filtered_df['product_type'].unique()
 )
 
-st.info(
-    f"""
-    🔹 **Top Product:** {top_product}  
-    🔹 **Top Category:** {top_category}  
-    🔹 **Peak Sales Day:** {best_day}
-    """
+product_df = filtered_df[filtered_df['product_type'] == selected_product]
+
+st.write("### Sales by Store Location")
+st.dataframe(
+    product_df.groupby('store_location')['total_amount'].sum()
 )
 
-# ---------------- RAW DATA ----------------
-with st.expander("📄 View Filtered Raw Data"):
-    st.dataframe(filtered_df)
+# -----------------------------
+# Footer
+# -----------------------------
+st.caption("Built with Streamlit | Coffee Shop Sales Analysis")
