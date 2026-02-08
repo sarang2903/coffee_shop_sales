@@ -7,7 +7,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("☕ Coffee Shop Sales – Interactive Analysis (No Charts)")
+st.title("☕ Coffee Shop Sales – Interactive Dashboard")
 
 # ---------------- LOAD DATA ----------------
 @st.cache_data
@@ -23,18 +23,18 @@ df = load_data()
 st.sidebar.header("🔎 Filters")
 
 location = st.sidebar.selectbox(
-    "Store Location",
-    ["All"] + sorted(df["store_location"].unique())
+    "Select Store Location",
+    ["All"] + sorted(df["store_location"].unique().tolist())
 )
 
 category = st.sidebar.selectbox(
-    "Product Category",
-    ["All"] + sorted(df["product_category"].unique())
+    "Select Product Category",
+    ["All"] + sorted(df["product_category"].unique().tolist())
 )
 
 month = st.sidebar.selectbox(
-    "Month",
-    ["All"] + sorted(df["month"].unique())
+    "Select Month",
+    ["All"] + sorted(df["month"].unique().tolist())
 )
 
 # ---------------- APPLY FILTERS ----------------
@@ -70,72 +70,43 @@ col3.metric(
 )
 
 # ---------------- SALES BY PRODUCT TYPE ----------------
-st.subheader("📦 Revenue by Product Type")
+st.subheader("📦 Sales by Product Type")
 
-product_sales = (
+sales_by_product = (
     filtered_df
-    .groupby("product_type", as_index=False)["total_amount"]
+    .groupby("product_type")["total_amount"]
     .sum()
-    .sort_values(by="total_amount", ascending=False)
+    .sort_values(ascending=False)
 )
 
-st.dataframe(product_sales)
+st.dataframe(sales_by_product)
 
-# ---------------- WEEKDAY PERFORMANCE ----------------
+# ---------------- WEEKDAY ANALYSIS ----------------
 st.subheader("📅 Average Sales by Weekday")
 
 weekday_sales = (
     filtered_df
-    .groupby("weekday", as_index=False)["total_amount"]
+    .groupby("weekday")["total_amount"]
     .mean()
-    .sort_values(by="total_amount", ascending=False)
+    .sort_values()
 )
 
 st.dataframe(weekday_sales)
 
-# ---------------- TOP & BOTTOM PRODUCTS ----------------
-st.subheader("🏆 Product Performance")
-
-col4, col5 = st.columns(2)
-
-with col4:
-    st.write("### 🔝 Top 10 Products by Quantity Sold")
-    top_products = (
-        filtered_df
-        .groupby("product_type", as_index=False)["transaction_qty"]
-        .sum()
-        .sort_values(by="transaction_qty", ascending=False)
-        .head(10)
-    )
-    st.dataframe(top_products)
-
-with col5:
-    st.write("### 🔻 Bottom 10 Products by Quantity Sold")
-    bottom_products = (
-        filtered_df
-        .groupby("product_type", as_index=False)["transaction_qty"]
-        .sum()
-        .sort_values(by="transaction_qty")
-        .head(10)
-    )
-    st.dataframe(bottom_products)
-
 # ---------------- PIVOT TABLE ----------------
-st.subheader("📊 Category vs Store Location (Revenue)")
+st.subheader("📊 Category vs Store Location")
 
-pivot_table = pd.pivot_table(
+pivot = pd.pivot_table(
     filtered_df,
     index="product_category",
     columns="store_location",
     values="total_amount",
     aggfunc="sum",
-    fill_value=0,
-    margins=True
+    fill_value=0
 )
 
-st.dataframe(pivot_table)
+st.dataframe(pivot)
 
 # ---------------- RAW DATA ----------------
-with st.expander("📄 View Filtered Raw Data"):
+with st.expander("📄 View Raw Data"):
     st.dataframe(filtered_df)
-    
